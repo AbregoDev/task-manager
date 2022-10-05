@@ -17,11 +17,36 @@ router.post('/tasks', auth, async (req, res) => {
     }
 });
 
+// GET /tasks?completed=true
+// GET /tasks?limit=10&skip=5
+// GET /tasks?sortBy=createdAt:desc
 router.get('/tasks', auth, async (req, res) => {
+    const match = {};
+    const sort = {};
+
+    const { completed, limit, skip, sortBy } = req.query;
+
+    if (completed) {
+        match.completed = completed === 'true';
+    }
+
+    if (sortBy) {
+        const parts = sortBy.split(':');
+        sort[parts[0]] = parts[1] === 'asc' ? 1 : -1;
+    }
+
     try {
         // const tasks = await Task.find({ owner: req.user._id });
         const user = req.user;
-        await user.populate('tasks');
+        await user.populate({
+            path: 'tasks',
+            match,
+            options: {
+                limit: parseInt(limit),
+                skip: parseInt(skip),
+                sort,
+            }
+        });
         res.send(user.tasks);
     } catch(e) {
         res.status(500).send(e);
@@ -75,7 +100,7 @@ router.patch('/tasks/:id', auth, async (req, res) => {
     }
 });
 
-router.delete('tasks/:id', auth, async (req, res) => {
+router.delete('/tasks/:id', auth, async (req, res) => {
     const _id = req.params.id;
     try {
         const task = await Task.findOneAndDelete({ _id, owner: req.user._id });
