@@ -93,7 +93,6 @@ router.delete('/users/me', auth, async ({ user }, res) => {
 });
 
 const upload = multer({
-    dest: 'avatars',
     limits: {
         fileSize: 1_048_576
     },
@@ -106,10 +105,38 @@ const upload = multer({
     }
 });
 
-router.post('/users/me/avatar', upload.single('avatar'), (req, res) => {
+router.post('/users/me/avatar', auth, upload.single('avatar'), async (req, res) => {
+    req.user.avatar = req.file.buffer;
+    await req.user.save();
     res.send();
 }, (error, req, res, next) => {
     res.status(400).send({ error: error.message });
+});
+
+router.delete('/users/me/avatar', auth, async (req, res) => {
+    if (req.user.avatar) {
+        req.user.avatar = undefined;
+        await req.user.save();
+        return res.send({ message: 'Avatar pic deleted' });
+    }
+
+    res.status(400).send({ error: 'There\'s no avatar' });
+});
+
+router.get('/users/:id/avatar', async (req, res) => {
+    const id = req.params.id;
+    try {
+        const user = await User.findById(id);
+
+        if (!user?.avatar) {
+            throw new Error();
+        }
+
+        res.set('Content-Type', 'image/jpg');
+        res.send(user.avatar);
+    } catch {
+        res.status(400).send({ error: 'User doesn\'t exists or doesn\'t have an avatar' });
+    }
 });
 
 module.exports = router;
