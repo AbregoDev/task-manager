@@ -6,7 +6,7 @@ const auth = async (req, res, next) => {
         // Extract token from header
         const token = req.header('Authorization').replace('Bearer ', '');
         // Verify if token is valid with JWT and return decoded token
-        const decoded = jwt.verify(token, 'secret-word');
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
         // Search for user with _id and check if session is on
         const user = await User.findOne({ _id: decoded._id, 'tokens.token': token });
 
